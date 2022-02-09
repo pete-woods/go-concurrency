@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/circleci/ex/httpserver/ginrouter"
@@ -15,9 +15,8 @@ import (
 type MyServer struct {
 	router *gin.Engine
 
-	// mutable state managed by mutex
-	mu      sync.Mutex
-	counter int
+	// mutable state
+	counter int64
 }
 
 func NewMyServer(ctx context.Context) *MyServer {
@@ -32,18 +31,12 @@ func (s *MyServer) Handler() http.Handler {
 }
 
 func (s *MyServer) Counter() int {
-	return s.counter
+	return int(s.counter)
 }
 
 func (s *MyServer) getMyPage(c *gin.Context) {
 	ctx := c.Request.Context()
-	count := 0
-	func() {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		s.counter++
-		count = s.counter
-	}()
+	count := atomic.AddInt64(&s.counter, 1)
 
 	time.Sleep(10 * time.Millisecond)
 	o11y.AddField(ctx, "count", count)
