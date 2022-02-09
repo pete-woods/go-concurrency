@@ -37,10 +37,13 @@ func (s *MyServer) Counter() int {
 
 func (s *MyServer) getMyPage(c *gin.Context) {
 	ctx := c.Request.Context()
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.counter++
-	count := s.counter
+	count := 0
+	func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		s.counter++
+		count = s.counter
+	}()
 
 	time.Sleep(10 * time.Millisecond)
 	o11y.AddField(ctx, "count", count)
